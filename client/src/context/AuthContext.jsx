@@ -99,36 +99,22 @@ export const AuthProvide = ({ children }) => {
     }
   }, [errors])
   //para guardar la cookie con js-cookie
- useEffect(() => {
-  const checkLogin = async () => {
-    setLoading(true);
+useEffect(() => {
+  const checkAuth = async () => {
     try {
-      // Opción 1: Usando solo withCredentials (recomendado para tu caso)
       const res = await verifyTokenRequest();
-      
-      // Opción 2: Usando js-cookie (alternativa)
-      // const token = Cookies.get('access_token');
-      // const res = await verifyTokenRequest(token);
-
-      if (!res.data) {
-        throw new Error('No hay datos de usuario');
+      if (res.data) {
+        setUser(res.data);
+        setIsAuthenticated(true);
       }
-      
-      setUser(res.data);
-      setIsAuthenticated(true);
     } catch (error) {
       setIsAuthenticated(false);
       setUser(null);
-      
-      // Limpia cookies si el token es inválido
-      Cookies.remove('access_token');
-    } finally {
-      setLoading(false);
     }
   };
-
-  checkLogin();
-}, []); // <-- Array vacío para ejecutar solo al montar
+  
+  if (!isAuthenticated) checkAuth(); // Solo verifica si NO está autenticado
+}, []) // <-- Array vacío para ejecutar solo al montar
   return (
     <AuthContext.Provider value={{
       signUp,
