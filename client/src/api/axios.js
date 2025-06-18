@@ -7,18 +7,20 @@ const instance = axios.create({
     'Content-Type': 'application/json',
     'Accept': 'application/json'
   }
-});
+})
 
-// Interceptor para manejar errores
+// axios.js - Interceptor corregido
 instance.interceptors.response.use(
   response => response,
   error => {
     if (error.response?.status === 401) {
-      // Manejar logout cuando el token expira
-      window.location.href = '/login?session=expired';
+      // Solo redirige si no está ya en login
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login?session=expired';
+      }
     }
     return Promise.reject(error);
   }
-);
+)
 
 export default instance;
