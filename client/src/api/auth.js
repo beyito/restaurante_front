@@ -12,7 +12,18 @@ export const logoutRequest = () => instancia.get('/auth/logout',{
   withCredentials: true // Obligatorio para cookies entre dominios
 });
 
-export const verifyTokenRequest = () => instancia.get('/auth/verificar',{
-  withCredentials: true, // Obligatorio para cookies entre dominios
-  timeout: 5000 // Timeout para no bloquear la UI
-});
+export const verifyTokenRequest = (token = null) => {
+  const config = {
+    withCredentials: true,
+    timeout: 5000
+  };
+  
+  // Si se proporciona un token explícito (para SSR o casos especiales)
+  if (token) {
+    config.headers = {
+      Authorization: `Bearer ${token}`
+    };
+  }
+
+  return instancia.get('/auth/verificar', config);
+};
