@@ -1,134 +1,126 @@
-import { createContext, useContext, useEffect, useState } from "react";
-import { registerRequest, loginRequest, verifyTokenRequest, logoutRequest } from "../api/auth.js";
+// AuthContext.jsx
+import { createContext, useContext, useEffect, useState } from 'react';
+import {
+  registerRequest,
+  loginRequest,
+  verifyTokenRequest,
+  logoutRequest
+} from '../api/auth';
+import { actualizarPerfil } from '@/api/cliente/actualizarPerfil';
 
-import Cookies from 'js-cookie'
-import { actualizarPerfil } from "@/api/cliente/actualizarPerfil.js";
+const AuthContext = createContext();
 
-const AuthContext = createContext()
-
-//hook para importar el useContext
-//para exporta automaticamente el uso de contexto
-function useAuth() {
-  const context = useContext(AuthContext)
+export function useAuth() {
+  const context = useContext(AuthContext);
   if (!context) {
-    throw new Error("useAuth deberia estar dentro de un AuthProvider");
+    throw new Error('useAuth debe estar dentro de un AuthProvider');
   }
-  return context
+  return context;
 }
 
-export { useAuth };
-
-// para guardar el contexto del usuario y poder ocupar sus datos
-// otras paginas
 export const AuthProvide = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [errors, setErrors] = useState([]);
+  const [isLoading, setLoading] = useState(true);
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
 
-  const [user, setUser] = useState(null)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [errors, setErrors] = useState([])
-  const [isLoading, setLoading] = useState(true)
-
-
-  const signUp = async (user) => {
+  const signUp = async (userData) => {
     try {
-      //paso 1
-      const res = await registerRequest(user);
-      setUser(res.data)
-      //paso 2
-      setIsAuthenticated(true)
+      const res = await registerRequest(userData);
+      setUser(res.data);
+      setIsAuthenticated(true);
     } catch (error) {
-      //paso 3
-      const msjDeError = error?.response?.data?.error || "Ocurrio un error inesperado"
-      setErrors([{ msg: msjDeError }])
+      handleError(error);
     }
-  }
+  };
 
-  const signIn = async (user) => {
+  const signIn = async (credentials) => {
     try {
-      const res = await loginRequest(user)
-      setUser(res.data)
-      setIsAuthenticated(true)
+      const res = await loginRequest(credentials); // debe usar withCredentials: true
+      setUser(res.data.user);
+      setIsAuthenticated(true);
+      refrescarDatos()
     } catch (error) {
-      const msjDeError = error?.response?.data?.error || "Ocurrio un error inesperado"
-      setErrors([{ msg: msjDeError }])
-      console.log(error)
+      handleError(error);
     }
-  }
+  };
 
   const signOut = async () => {
     try {
-      await logoutRequest()
-      setUser(null)
-      setIsAuthenticated(false)
+      await logoutRequest(); // debe limpiar la cookie en el backend
+      setUser(null);
+      setIsAuthenticated(false);
     } catch (error) {
-      setErrors([{ msg: "Error al cerrar sesión" }])
-      console.log(error)
+      handleError(error);
     }
-  }
+  };
 
-  const editarUsuario = async (id, user) => {
+  const editarUsuario = async (id, userData) => {
     try {
-      const res = await actualizarPerfil(id, user)
-      if (!res.data) {
-        throw new Error("No se recibieron datos en la respuesta")
-      }
-      setUser(res.data)
-      setIsAuthenticated(true);
-      return { success: true, data: res.data }
+      const res = await actualizarPerfil(id, userData);
+      setUser(res.data);
+      return { success: true, data: res.data };
     } catch (error) {
-      const msjDeError = error?.response?.data?.error || "Ocurrio un error inesperado"
-      setErrors([{ msg: msjDeError }])
+      handleError(error);
     }
-  }
+  };
 
   const reloadUser = async () => {
     try {
-      const res = await verifyTokenRequest('/auth/verificar');
+      const res = await verifyTokenRequest();
       setUser(res.data);
     } catch (error) {
-      console.error("Error recargando usuario:", error);
+      console.error('Error recargando usuario:', error);
     }
   };
 
-  //para eliminar los errores que aparecen en el form
+  const handleError = (error) => {
+    const msg = error?.response?.data?.error || 'Ocurrió un error inesperado';
+    setErrors([{ msg }]);
+  };
+
   useEffect(() => {
     if (errors.length > 0) {
-      const timer = setTimeout(() => {
-        setErrors([])
-      }, 2000)
-      return () => clearTimeout(timer)
+      const timer = setTimeout(() => setErrors([]), 2000);
+      return () => clearTimeout(timer);
     }
-  }, [errors])
-  //para guardar la cookie con js-cookie
-useEffect(() => {
-  const checkAuth = async () => {
-    try {
-      const res = await verifyTokenRequest();
-      if (res.data) {
+  }, [errors]);
+
+  useEffect(() => {
+    const checkLogin = async () => {
+      try {
+        const res = await verifyTokenRequest(); // debe usar withCredentials: true
         setUser(res.data);
         setIsAuthenticated(true);
+      } catch {
+        setUser(null);
+        setIsAuthenticated(false);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      setIsAuthenticated(false);
-      setUser(null);
-    }
-  };
-  
-  if (!isAuthenticated) checkAuth(); // Solo verifica si NO está autenticado
-}, []) // <-- Array vacío para ejecutar solo al montar
-  return (
-    <AuthContext.Provider value={{
-      signUp,
-      signIn,
-      signOut,
-      editarUsuario,
-      reloadUser,
-      user,
-      isAuthenticated,
-      isLoading,
-      errors,
+    };
+    checkLogin();
+  }, [refreshTrigger]);
 
-    }}>
+  const refrescarDatos = () => setRefreshTrigger(prev => prev + 1);
+
+  return (
+    <AuthContext.Provider
+      value={{
+        signUp,
+        signIn,
+        signOut,
+        editarUsuario,
+        reloadUser,
+        refrescarDatos,
+        user,
+        isAuthenticated,
+        isLoading,
+        errors
+      }}
+    >
       {children}
     </AuthContext.Provider>
-  )
-}
+  );
+};

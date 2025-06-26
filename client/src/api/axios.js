@@ -1,26 +1,8 @@
-import axios from 'axios';
+import axios from 'axios'
 
-const instance = axios.create({
-  baseURL: 'https://restaurante-jbe5.onrender.com',
-  withCredentials: true, // Esto es CRUCIAL para cookies entre dominios
-  headers: {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json'
-  }
+const instancia = axios.create({
+  baseURL: import.meta.env.VITE_API_URL,
+  withCredentials: true
 })
 
-// axios.js - Interceptor corregido
-instance.interceptors.response.use(
-  response => response,
-  error => {
-    if (error.response?.status === 401) {
-      // Solo redirige si no está ya en login
-      if (!window.location.pathname.includes('/login')) {
-        window.location.href = '/login?session=expired';
-      }
-    }
-    return Promise.reject(error);
-  }
-)
-
-export default instance;
+export default instancia

@@ -5,18 +5,25 @@ import { UtensilsCrossed, Menu } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger, SheetDescription, SheetTitle } from "@/components/ui/sheet"
 import { CartModal } from "@/components/modals/ModalCarrito"
 import { Button } from "@/components/ui/button"
+import { useAuth } from "@/context/AuthContext"
+import { SkeletonHeader } from "./SkeletonHeader"
 //import { Theme } from "../Tema/Theme"
 
-export function Header({ isAuthenticated, user, signOut }) {
+export function Header() {
+  const { user, isLoading, isAuthenticated, signOut } = useAuth()
 
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const { email, userName } = user?.user || { email: "anonimos@gmail.com", userName: "Anonimos" }
+  const { email = "anonimos@gmail.com", userName = "Anonimos" } = user?.user || {};
   const routes = [
     { to: "/login", label: "Inicio" },
     { to: "/", label: "Menú" },
     { to: "/reservar", label: "Reservar" },
     { to: "/contacto", label: "Contacto" },
+    { to: "/verificar", label: "Verificar" }
   ]
+  if (isLoading) {
+    return <SkeletonHeader />
+  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -103,7 +110,7 @@ export function Header({ isAuthenticated, user, signOut }) {
                   {isAuthenticated ? (
                     <div className="flex items-center gap-5">
                       <img
-                        src={user.avatar}
+                        src={user?.avatar || "https://via.placeholder.com/150"}
                         alt={userName}
                         className="align-top w-10 h-10 rounded-full border object-cover"
                       />
@@ -120,7 +127,7 @@ export function Header({ isAuthenticated, user, signOut }) {
                   ) : (
                     <>
                       <Button asChild variant="ghost" size="sm">
-                        <Link to="/login" onClick={() => setIsMenuOpen(false)}>Iniciar Sesión</Link>
+                        <Link to="/login" onClick={() => { setIsMenuOpen(false) }}>Iniciar Sesión</Link>
                       </Button>
                       <Button asChild size="sm">
                         <Link to="/registro" onClick={() => setIsMenuOpen(false)}>Registrarse</Link>

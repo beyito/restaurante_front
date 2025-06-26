@@ -155,10 +155,18 @@ const SideBar = ({ setActiveTab }) => {
                   <DocumentTextIcon className='w-8 h-8' />
                   Gestionar Recetas
                 </h2>
-                <h2 className='flex items-center gap-4 text-sm font-medium text-[#b0bec5] hover:text-[#615FFF] cursor-pointer transition-all duration-300 mt-2'>
+                <NavLink
+                  to='/dashboard/ingrediente'
+                  className={({ isActive }) =>
+                    `flex items-center gap-4 text-sm font-medium ${
+                      isActive ? 'text-[#615FFF]' : 'text-[#b0bec5]'
+                    } hover:text-[#615FFF] transition-all duration-300 mt-2`
+                  }
+                  onClick={() => setSidebarOpen(false)}
+                >
                   <ShoppingBagIcon className='w-8 h-8' />
                   Gestionar Ingredientes
-                </h2>
+                </NavLink>
               </div>
             )}
             <h2
@@ -236,6 +244,18 @@ const SideBar = ({ setActiveTab }) => {
                   <BanknotesIcon className='w-8 h-8' />
                   Gestionar Pagos
                 </h2>
+                <NavLink
+                  to='/dashboard/tickets'
+                  className={({ isActive }) =>
+                    `flex items-center gap-4 text-sm font-medium ${
+                      isActive ? 'text-[#615FFF]' : 'text-[#b0bec5]'
+                    } hover:text-[#615FFF] transition-all duration-300 mt-2`
+                  }
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  <DocumentTextIcon className='w-8 h-8' />
+                  Emitir tickets
+                </NavLink>
 
                 <h2
                   className='flex items-center gap-4 text-sm font-medium text-[#b0bec5] hover:text-[#615FFF] cursor-pointer transition-all duration-300 mt-2'
@@ -297,17 +317,17 @@ const SideBar = ({ setActiveTab }) => {
             )}
           </div>
           <NavLink
-                  to='/dashboard/recetas'
-                  className={({ isActive }) =>
-                    `flex items-center gap-4 text-sm font-medium ${
-                      isActive ? 'text-[#615FFF]' : 'text-[#b0bec5]'
-                    } hover:text-[#615FFF] transition-all duration-300 mt-2`
-                  }
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  <ClipboardDocumentCheckIcon className='w-8 h-8' />
-                  recetas
-                </NavLink>
+            to='/dashboard/recetas'
+            className={({ isActive }) =>
+              `flex items-center gap-4 text-sm font-medium ${
+                isActive ? 'text-[#615FFF]' : 'text-[#b0bec5]'
+              } hover:text-[#615FFF] transition-all duration-300 mt-2`
+            }
+            onClick={() => setSidebarOpen(false)}
+          >
+            <ClipboardDocumentCheckIcon className='w-8 h-8' />
+            recetas
+          </NavLink>
         </div>
 
         {/* SidebarFooter */}

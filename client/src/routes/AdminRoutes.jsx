@@ -6,6 +6,8 @@ import Rol from '../components/AdminDashboard/Rol'
 import Menu from '../components/AdminDashboard/Menu'
 import ProviderTable from '../components/AdminDashboard/Providers'
 import Inventario from '../components/AdminDashboard/Inventario'
+import TicketAdmin from '@/components/AdminDashboard/ticket'
+import Ingrediente from '../components/AdminDashboard/Ingrediente'
 import { RecetaPage } from '@/pages/recetas/RecetaPage'
 
 export default function DashboardRoutes() {
@@ -18,6 +20,8 @@ export default function DashboardRoutes() {
       <Route path='menu' element={<Menu />} />
       <Route path='recetas' element={<RecetaPage />} />
       <Route path='inventario' element={<Inventario />} />
+      <Route path='tickets' element={<TicketAdmin />} />
+      <Route path='ingrediente' element={<Ingrediente />} />
     </Route>
   )
 }

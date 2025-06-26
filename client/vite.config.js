@@ -6,20 +6,11 @@ import path from 'path'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(),tailwindcss()],
+  base: '/',
   resolve: {
     alias: {
       // eslint-disable-next-line no-undef
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  server: {
-    proxy: {
-      '/api': {
-        target: 'https://restaurante-jbe5.onrender.com',
-        changeOrigin: true,
-        secure: false,
-        ws: true,
-      }
-    }
-  }
 })

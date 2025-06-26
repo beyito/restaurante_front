@@ -1,4 +1,3 @@
-"use client"
 
 import { useState, useContext } from "react"
 import { Plus, Search, Edit, Trash2, ChefHat, Clock, Users } from "lucide-react"
@@ -19,59 +18,83 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
+import { Toaster } from "@/components/ui/sonner"
 import { RecetaForm } from "@/components/Receta/RecetaForm"
 import { RecetaContext } from "@/context/Receta/RecetaContext"
+import { useFetchData } from "@/hooks/useFetchData"
+import { crearProducto, obtenerProductos } from "@/api/cliente/productos"
 
-
-// Base de datos simulada de ingredientes
-
+const extractProducto = (res) => res.data
 
 export function RecetaPage() {
 
   const [searchTerm, setSearchTerm] = useState("")
   const [showForm, setShowForm] = useState(false)
-  const { receta, ingredientes } = useContext(RecetaContext)
+  const { data } = useFetchData(obtenerProductos, extractProducto)
+  const { receta, ingredientes, EditarReceta } = useContext(RecetaContext)
   const [editingReceta, setEditingReceta] = useState(null)
   const [recetas, setRecetas] = useState(receta)
 
-  console.log("ingredientes", ingredientes)
-  console.log("recetas", receta)
   // Filtrar recetas por término de búsqueda
   const recetasFiltradas = recetas.filter(
     (receta) =>
       receta.nombre.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  // Crear nueva receta
-  const handleCreateReceta = (nuevaReceta) => {
+  console.log('dataProductos:', data)
+
+  const handleCreateReceta = async (nuevaReceta) => {
     const receta = {
-      ...nuevaReceta,
-      id: Date.now().toString(),
-      fechaCreacion: new Date(),
+      ...nuevaReceta
     }
+    console.log("Receta a crear:", receta)
     setRecetas([...recetas, receta])
-    setShowForm(false)
-    toast.success("Receta creada", {
-      description: `La receta "${receta.nombre}" ha sido creada exitosamente.`,
-    })
+    try {
+      const response = await crearProducto(receta)
+      const productoCreadoId = response.data.nuevoProducto.id
+
+      await EditarReceta({
+        idProducto: productoCreadoId,
+        Ingredientes: receta.Ingredientes
+      })
+
+      console.log("Producto creado:", productoCreadoId)
+      toast.success("Receta creada", {
+        description: `La receta "${receta.nombre}" ha sido creada exitosamente.`,
+      })
+
+      setShowForm(false)
+    } catch (error) {
+      console.error("Error al crear la receta:", error)
+      toast.error("Error al crear la receta", {
+        description: "Ocurrió un error al intentar crear la receta.",
+      })
+      return
+    }
   }
 
-  // Editar receta existente
-  const handleEditReceta = (recetaEditada) => {
+  console.log("Recetas:", recetas)
+
+  const handleEditReceta = async (recetaEditada) => {
     if (!editingReceta) return
-
     const recetaActualizada = {
-      ...recetaEditada,
-      id: editingReceta.id,
+      ...recetaEditada
     }
-    console.log("Receta actualizada:", recetaActualizada)
+    console.log("Receta a editar:", recetaActualizada)
+    try {
+      await EditarReceta(recetaActualizada)
+      toast.success("Receta actualizada")
 
-    setRecetas(recetas.map((r) => (r.id === editingReceta.id ? recetaActualizada : r)))
-    setEditingReceta(null)
-    setShowForm(false)
-    toast.success("Receta actualizada", {
-      description: `La receta "${recetaActualizada.nombre}" ha sido actualizada exitosamente.`,
-    })
+      setRecetas(recetas.map((r) => (r.idProducto === editingReceta.idProducto ? recetaActualizada : r)))
+      setEditingReceta(null)
+      setShowForm(false)
+    } catch (error) {
+      console.error("Error al editar la receta:", error)
+      toast.error("Error al actualizar la receta", {
+        description: "Ocurrió un error al intentar actualizar la receta.",
+      })
+      return
+    }
   }
 
   // Eliminar receta
@@ -116,7 +139,9 @@ export function RecetaPage() {
   return (
     <div className="space-y-6 container max-h-[calc(100vh-128px)] overflow-y-auto">
       {/* Header */}
+      <Toaster richColors position="top-right" />
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+
         <div>
           <h2 className="text-2xl font-bold">Gestión de Recetas</h2>
           <p className="text-muted-foreground">Administra las recetas del restaurante</p>
