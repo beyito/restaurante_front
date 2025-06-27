@@ -9,28 +9,22 @@ import {
   SheetDescription,
   SheetTitle
 } from '@/components/ui/sheet'
-import { CartModal } from '@/components/modals/ModalCarrito'
 import { Button } from '@/components/ui/button'
-import { useAuth } from '@/context/AuthContext'
-import { SkeletonHeader } from './SkeletonHeader'
-//import { Theme } from "../Tema/Theme"
 
-export function Header() {
-  const { user, isLoading, isAuthenticated, signOut } = useAuth()
-
+export function MeseroHeader({ isAuthenticated, user, signOut }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const { email = 'anonimos@gmail.com', userName = 'Anonimos' } =
-    user?.user || {}
+  const { email, userName } = user?.user || {
+    email: 'anonimos@gmail.com',
+    userName: 'Anonimos'
+  }
+
   const routes = [
     { to: '/login', label: 'Inicio' },
     { to: '/', label: 'Menú' },
     { to: '/reservar', label: 'Reservar' },
-    { to: '/verificar', label: 'Verificar' },
-    { to: '/descuentos', label: 'Descuentos' }
+    { to: '/contacto', label: 'Contacto' },
+    { to: '/verificar', label: 'Verificar' }
   ]
-  if (isLoading) {
-    return <SkeletonHeader />
-  }
 
   return (
     <header className='sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60'>
@@ -54,15 +48,9 @@ export function Header() {
           ))}
         </nav>
         <div className='ml-auto flex items-center gap-4'>
-          {/* <Theme /> */}
-          <CartModal />
           {isAuthenticated ? (
             <div className='hidden md:flex items-center gap-3'>
-              <div
-                className='h-10 w-10 rounded-full bg-black mr-2
-                 flex-shrink-0 flex items-center justify-center 
-                 text-white text-xs'
-              >
+              <div className='h-10 w-10 rounded-full bg-black mr-2 flex-shrink-0 flex items-center justify-center text-white text-xs'>
                 {userName.charAt(0).toUpperCase()}
                 {userName.charAt(1)}
               </div>
@@ -87,7 +75,7 @@ export function Header() {
                 <Link to='/login'>Iniciar Sesión</Link>
               </Button>
               <Button asChild size='sm'>
-                <Link to='/register'>Registrarse</Link>
+                <Link to='/registro'>Registrarse</Link>
               </Button>
             </div>
           )}
@@ -127,11 +115,10 @@ export function Header() {
                 <div className='mt-4 flex flex-col gap-2'>
                   {isAuthenticated ? (
                     <div className='flex items-center gap-5'>
-                      <img
-                        src={user?.avatar || 'https://via.placeholder.com/150'}
-                        alt={userName}
-                        className='align-top w-10 h-10 rounded-full border object-cover'
-                      />
+                      <div className='h-10 w-10 rounded-full bg-black flex items-center justify-center text-white text-xs'>
+                        {userName.charAt(0).toUpperCase()}
+                        {userName.charAt(1)}
+                      </div>
                       <div className='flex flex-col gap-9'>
                         <Link
                           to='/perfil'
@@ -166,18 +153,13 @@ export function Header() {
                   ) : (
                     <>
                       <Button asChild variant='ghost' size='sm'>
-                        <Link
-                          to='/login'
-                          onClick={() => {
-                            setIsMenuOpen(false)
-                          }}
-                        >
+                        <Link to='/login' onClick={() => setIsMenuOpen(false)}>
                           Iniciar Sesión
                         </Link>
                       </Button>
                       <Button asChild size='sm'>
                         <Link
-                          to='/register'
+                          to='/registro'
                           onClick={() => setIsMenuOpen(false)}
                         >
                           Registrarse

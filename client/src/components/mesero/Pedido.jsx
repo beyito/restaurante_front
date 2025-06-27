@@ -28,12 +28,16 @@ import {
   DialogTitle
 } from '@/components/ui/dialog'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-
+import { Elements } from '@stripe/react-stripe-js'
+import { stripePromise } from '@/stripe'
 import { buscarMesasDisponibles } from '@/api/cliente/reserva'
 import { obtenerProductos } from '@/api/cliente/productos'
-import { getIngredientsRequest } from '@/api/receta'
-import { registrarPedidoRequest } from '@/api/pedido'
+import { getIngredientsRequest } from '@/api/receta/receta.js'
+import { registrarPedidoRequest } from '@/api/cliente/productos'
+import { pagarTicket } from '@/api/pedido.js'
 import { useFetchData } from '@/hooks/useFetchData'
+import { useAuth } from '@/context/AuthContext'
+import { MetodoPago } from '../MetodoPago/MetodoPago'
 
 const categorias = [
   'Todos',
@@ -64,6 +68,7 @@ export default function MeseroPedidos() {
 
   const { data: mesas } = useFetchData(fetchFunction, extractMesa)
   const { data: productos } = useFetchData(obtenerProductos, extractProductos)
+  const { user } = useAuth()
 
   const [ingredientesProductos, setIngredientesProductos] = useState({})
   const [cargandoIngredientes, setCargandoIngredientes] = useState({})
@@ -82,23 +87,21 @@ export default function MeseroPedidos() {
   const [errorEnvio, setErrorEnvio] = useState(null)
   const [pedidoEnviado, setPedidoEnviado] = useState(false)
 
-  // ID del usuario (esto debería venir del contexto de autenticación)
-  const idUsuario = 1 // Cambiar por el ID real del usuario logueado
+  const [metodoPagoSeleccionado, setMetodoPagoSeleccionado] =
+    useState('efectivo')
+  const [mostrarPago, setMostrarPago] = useState(false)
 
+  // ID del usuario (esto debería venir del contexto de autenticación)
+  const idUsuario = user?.user?.id || null
   // Función para procesar los ingredientes que vienen de la API
   const procesarIngredientes = (data) => {
     if (!data || data.length === 0) return []
 
-    // Filtramos solo los registros que tienen nombreIngrediente (no null)
-    const ingredientes = data
-      .filter((item) => item.nombreIngrediente !== null)
-      .map((item, index) => ({
-        id: index + 1, // Generamos un ID único
-        nombre: item.nombreIngrediente,
-        cantidad: item.cantidad
-      }))
-
-    return ingredientes
+    return data.map((item) => ({
+      idIngrediente: item.idIngrediente, // ya viene de la API
+      nombreIngrediente: item.nombreIngrediente,
+      cantidad: item.cantidad
+    }))
   }
 
   // Fetch de ingredientes desde la API
@@ -216,6 +219,8 @@ export default function MeseroPedidos() {
     setMesasSeleccionadas([])
     setPedidoEnviado(false)
     setErrorEnvio(null)
+    setMetodoPagoSeleccionado('efectivo')
+    setMostrarPago(false)
   }
 
   const calcularTotal = () => {
@@ -230,20 +235,26 @@ export default function MeseroPedidos() {
     setErrorEnvio(null)
   }
 
-  // Función para enviar el pedido
+  // Función para enviar el pedido (solo efectivo)
   const enviarPedido = async () => {
     setEnviandoPedido(true)
     setErrorEnvio(null)
 
     try {
-      const response = await registrarPedidoRequest(idUsuario, pedido)
-      console.log('Pedido enviado exitosamente:', response.data)
+      const pedidoConMetodo = {
+        ...pedido,
+        metodoPago: metodoPagoSeleccionado
+      }
 
+      const response = await registrarPedidoRequest(idUsuario, pedidoConMetodo)
+      console.log('Pedido enviado exitosamente:', response.data)
+      await pagarTicket(response.data.idPedido,3)
       setPedidoEnviado(true)
 
       // Cerrar modal después de 2 segundos y limpiar pedido
       setTimeout(() => {
         setModalAbierto(false)
+        setMostrarPago(false)
         limpiarPedido()
       }, 2000)
     } catch (error) {
@@ -254,6 +265,50 @@ export default function MeseroPedidos() {
       )
     } finally {
       setEnviandoPedido(false)
+    }
+  }
+
+  // Función para manejar el éxito del pago con tarjeta
+  const handlePagoExitoso = async () => {
+    setEnviandoPedido(true)
+    setErrorEnvio(null)
+
+    try {
+      const pedidoConMetodo = {
+        ...pedido,
+        metodoPago: 'tarjeta'
+      }
+
+      const response = await registrarPedidoRequest(idUsuario, pedidoConMetodo)
+      console.log('Pedido con pago exitoso:', response.data)
+      await pagarTicket(response.data.idPedido,2)
+      await setPedidoEnviado(true)
+
+      // Cerrar modal después de 2 segundos y limpiar pedido
+      setTimeout(() => {
+        setModalAbierto(false)
+        setMostrarPago(false)
+        limpiarPedido()
+      }, 2000)
+      
+    } catch (error) {
+      console.error('Error al enviar pedido:', error)
+      setErrorEnvio(
+        error.response?.data?.message ||
+          'Error al enviar el pedido después del pago. Intenta nuevamente.'
+      )
+    } finally {
+      
+      setEnviandoPedido(false)
+    }
+  }
+
+  // Función para continuar con el método de pago seleccionado
+  const continuarConMetodoPago = () => {
+    if (metodoPagoSeleccionado === 'efectivo') {
+      enviarPedido()
+    } else {
+      setMostrarPago(true)
     }
   }
 
@@ -401,7 +456,7 @@ export default function MeseroPedidos() {
                             </Badge>
                           </div>
                           <p className='text-lg font-bold text-green-600'>
-                            ${producto.precio}
+                            {producto.precio} Bs
                           </p>
                         </div>
                         <Button
@@ -536,9 +591,9 @@ export default function MeseroPedidos() {
                                 </Button>
                               </div>
                               <div className='text-sm font-bold text-green-600'>
-                                $
                                 {productoPedido.precio *
                                   productoPedido.cantidad}
+                                Bs
                               </div>
                             </div>
 
@@ -561,28 +616,29 @@ export default function MeseroPedidos() {
                                     []
                                   ).map((ingrediente) => (
                                     <div
-                                      key={ingrediente.id}
+                                      key={ingrediente.idIngrediente}
                                       className='flex items-center space-x-2'
                                     >
                                       <Checkbox
-                                        id={`${productoPedido.id}-${ingrediente.id}`}
+                                        id={`${productoPedido.id}-${ingrediente.idIngrediente}`}
                                         checked={productoPedido.exclusiones.some(
                                           (e) =>
-                                            e.idIngrediente === ingrediente.id
+                                            e.idIngrediente ===
+                                            ingrediente.idIngrediente
                                         )}
                                         onCheckedChange={() =>
                                           toggleExclusion(
                                             productoPedido.id,
-                                            ingrediente.id
+                                            ingrediente.idIngrediente
                                           )
                                         }
                                         className='h-3 w-3'
                                       />
                                       <Label
-                                        htmlFor={`${productoPedido.id}-${ingrediente.id}`}
+                                        htmlFor={`${productoPedido.id}-${ingrediente.idIngrediente}`}
                                         className='text-xs'
                                       >
-                                        {ingrediente.nombre}
+                                        {ingrediente.nombreIngrediente}
                                       </Label>
                                     </div>
                                   ))}
@@ -601,7 +657,9 @@ export default function MeseroPedidos() {
                     <Separator className='my-4' />
                     <div className='flex justify-between items-center font-bold text-lg bg-green-50 p-3 rounded-lg'>
                       <span>Total:</span>
-                      <span className='text-green-600'>${calcularTotal()}</span>
+                      <span className='text-green-600'>
+                        {calcularTotal()} Bs
+                      </span>
                     </div>
                   </>
                 )}
@@ -633,39 +691,112 @@ export default function MeseroPedidos() {
             <DialogHeader>
               <DialogTitle className='flex items-center gap-2'>
                 <ShoppingCart className='h-5 w-5' />
-                Confirmar Pedido
+                {mostrarPago ? 'Procesar Pago' : 'Confirmar Pedido'}
               </DialogTitle>
               <DialogDescription>
-                ¿Estás seguro de que deseas enviar este pedido?
+                {mostrarPago
+                  ? 'Completa el pago con tarjeta para confirmar tu pedido'
+                  : '¿Estás seguro de que deseas enviar este pedido?'}
               </DialogDescription>
             </DialogHeader>
 
             <div className='space-y-4'>
-              {/* Resumen del pedido */}
-              <div className='bg-gray-50 p-4 rounded-lg'>
-                <div className='space-y-2'>
-                  <div className='flex justify-between text-sm'>
-                    <span className='font-medium'>Mesas:</span>
-                    <span>
-                      {mesasSeleccionadas
-                        .map((mesaId) => {
-                          const mesa = mesas.find((m) => m.id === mesaId)
-                          return `Mesa ${mesa?.nro}`
-                        })
-                        .join(', ')}
-                    </span>
+              {!mostrarPago && !pedidoEnviado && (
+                <>
+                  {/* Resumen del pedido */}
+                  <div className='bg-gray-50 p-4 rounded-lg'>
+                    <div className='space-y-2'>
+                      <div className='flex justify-between text-sm'>
+                        <span className='font-medium'>Mesas:</span>
+                        <span>
+                          {mesasSeleccionadas
+                            .map((mesaId) => {
+                              const mesa = mesas.find((m) => m.id === mesaId)
+                              return `Mesa ${mesa?.nro}`
+                            })
+                            .join(', ')}
+                        </span>
+                      </div>
+                      <div className='flex justify-between text-sm'>
+                        <span className='font-medium'>Productos:</span>
+                        <span>{pedido.productos.length} items</span>
+                      </div>
+                      <Separator />
+                      <div className='flex justify-between font-bold'>
+                        <span>Total:</span>
+                        <span className='text-green-600'>
+                          {calcularTotal()} Bs
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div className='flex justify-between text-sm'>
-                    <span className='font-medium'>Productos:</span>
-                    <span>{pedido.productos.length} items</span>
+
+                  {/* Selección de método de pago */}
+                  <div className='space-y-3'>
+                    <Label className='text-sm font-medium'>
+                      Método de pago:
+                    </Label>
+                    <div className='space-y-2'>
+                      <div className='flex items-center space-x-2'>
+                        <input
+                          type='radio'
+                          id='efectivo'
+                          name='metodoPago'
+                          value='efectivo'
+                          checked={metodoPagoSeleccionado === 'efectivo'}
+                          onChange={(e) =>
+                            setMetodoPagoSeleccionado(e.target.value)
+                          }
+                          className='h-4 w-4 text-blue-600 focus:ring-blue-500'
+                        />
+                        <Label htmlFor='efectivo' className='text-sm'>
+                          💵 Efectivo
+                        </Label>
+                      </div>
+                      <div className='flex items-center space-x-2'>
+                        <input
+                          type='radio'
+                          id='tarjeta'
+                          name='metodoPago'
+                          value='tarjeta'
+                          checked={metodoPagoSeleccionado === 'tarjeta'}
+                          onChange={(e) =>
+                            setMetodoPagoSeleccionado(e.target.value)
+                          }
+                          className='h-4 w-4 text-blue-600 focus:ring-blue-500'
+                        />
+                        <Label htmlFor='tarjeta' className='text-sm'>
+                          💳 Tarjeta de crédito/débito
+                        </Label>
+                      </div>
+                    </div>
                   </div>
-                  <Separator />
-                  <div className='flex justify-between font-bold'>
-                    <span>Total:</span>
-                    <span className='text-green-600'>${calcularTotal()}</span>
+                </>
+              )}
+
+              {/* Componente de pago con tarjeta */}
+              {mostrarPago &&
+                metodoPagoSeleccionado === 'tarjeta' &&
+                !pedidoEnviado && (
+                  <div className='space-y-4'>
+                    <div className='bg-blue-50 p-4 rounded-lg'>
+                      <div className='flex justify-between font-bold text-blue-800'>
+                        <span>Total a pagar:</span>
+                        <span>{calcularTotal()} Bs</span>
+                      </div>
+                    </div>
+
+                    <Elements stripe={stripePromise}>
+                      <MetodoPago
+                        onSuccess={handlePagoExitoso}
+                        productos={pedido.productos.map((p) => ({
+                          precio: p.precio,
+                          quantity: p.cantidad
+                        }))}
+                      />
+                    </Elements>
                   </div>
-                </div>
-              </div>
+                )}
 
               {/* Mensaje de éxito */}
               {pedidoEnviado && (
@@ -687,32 +818,43 @@ export default function MeseroPedidos() {
             </div>
 
             <DialogFooter className='flex gap-2'>
-              <Button
-                variant='outline'
-                onClick={() => setModalAbierto(false)}
-                disabled={enviandoPedido || pedidoEnviado}
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={enviarPedido}
-                disabled={enviandoPedido || pedidoEnviado}
-                className='min-w-[100px]'
-              >
-                {enviandoPedido ? (
-                  <>
-                    <Loader2 className='h-4 w-4 animate-spin mr-2' />
-                    Enviando...
-                  </>
-                ) : pedidoEnviado ? (
-                  <>
-                    <Check className='h-4 w-4 mr-2' />
-                    Enviado
-                  </>
-                ) : (
-                  'Confirmar'
+              {!mostrarPago && !pedidoEnviado && (
+                <>
+                  <Button
+                    variant='outline'
+                    onClick={() => setModalAbierto(false)}
+                    disabled={enviandoPedido}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={continuarConMetodoPago}
+                    disabled={enviandoPedido}
+                    className='min-w-[100px]'
+                  >
+                    {enviandoPedido ? (
+                      <>
+                        <Loader2 className='h-4 w-4 animate-spin mr-2' />
+                        Enviando...
+                      </>
+                    ) : (
+                      'Continuar'
+                    )}
+                  </Button>
+                </>
+              )}
+
+              {mostrarPago &&
+                metodoPagoSeleccionado === 'tarjeta' &&
+                !pedidoEnviado && (
+                  <Button
+                    variant='outline'
+                    onClick={() => setMostrarPago(false)}
+                    disabled={enviandoPedido}
+                  >
+                    Volver
+                  </Button>
                 )}
-              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

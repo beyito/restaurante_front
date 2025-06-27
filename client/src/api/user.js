@@ -7,3 +7,14 @@ export const editUserRequest = async (user) => {
     return axios.patch(`/user/editarUsuario?id=${id}`, otrosDatos)
   }
 export const registerEmployeeRequest = async (user) => axios.post('/user/register', user)
+export const aumentarPuntosFidelidadRequest = (id, puntosFidelidad) =>
+  axios.patch(`/user/aumentarPuntosFidelidad/${id}`, { puntosFidelidad }) // si solo sube +1 no hace falta body
+
+export const disminuirPuntosFidelidadRequest = (id, puntosFidelidad) =>
+  axios.patch(`/user/disminuirPuntosFidelidad/${id}`, { puntosFidelidad }) // si solo resta -1 no hace falta body
+
+export const editarPuntosFidelidadRequest = (id, puntosFidelidad) =>
+  axios.patch(`/user/editarPuntosFidelidad/${id}`, { puntosFidelidad })
+
+export const getClientRequest = () =>
+  axios.get('/user/verClientes')

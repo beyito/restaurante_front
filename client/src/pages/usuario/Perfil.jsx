@@ -12,12 +12,16 @@ import { useNavigate } from "react-router"
 import { obtenerPedidoPorId } from "@/api/cliente/productos"
 import { ModificarReserva } from "@/components/usuario/ModificarReserva"
 import { ReservaContext } from "@/context/Reserva/ReservaContext"
+import { consultarPagosPorEmail } from "@/api/metodoPago/metodoPago"
+import { PagoSkeleto } from "../procesoPago/PagoSkeleto"
 
 
 
 export default function Perfil() {
   const { user, reloadUser } = useAuth()
   const [pedido, setPedido] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [pagos, setPagos] = useState([])
   const { mesas, reservas } = useContext(ReservaContext)
   const navigate = useNavigate()
   const { id, nombre, email, userName, telefono } = user?.user || {}
@@ -27,6 +31,11 @@ export default function Perfil() {
   useEffect(() => {
     const loadData = async () => {
       await reloadUser(); // Implementa esta función en tu AuthProvider
+      if (user) {
+        const resEmail = await consultarPagosPorEmail(email)
+        setIsLoading(false);
+        setPagos(resEmail.data);
+      }
       const response = await obtenerPedidoPorId(id);
       if (response.error) {
         console.error("Error al obtener el pedido:", response.error);
@@ -39,7 +48,7 @@ export default function Perfil() {
   }, [setPedido]);
 
 
-
+  console.log('Pagos:', pagos);
   // Datos de ejemplo del usuario
   const usuario = {
     nombre: "Juan Pérez",
@@ -134,44 +143,46 @@ export default function Perfil() {
             </TabsList>
 
             {/* Contenido de pedidos */}
-            {/* <TabsContent value="pedidos">
+            <TabsContent value="pedidos">
               <Card>
                 <CardHeader>
-                  <CardTitle>Mis pedidos</CardTitle>
-                  <CardDescription>Historial de tus pedidos recientes</CardDescription>
+                  <CardTitle>Mis Pagos</CardTitle>
+                  <CardDescription>Historial de tus pagos recientes</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {pedidos?.length > 0 ? (
+                  {isLoading ? (
+                    <PagoSkeleto />
+                  ) : pagos?.length > 0 ? (
                     <div className="space-y-4">
-                      {pedidos?.map((pedido) => (
+                      {pagos?.map((pago) => (
                         <div
-                          key={pedido.id}
+                          key={pago.id}
                           className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg border"
                         >
                           <div>
-                            <div className="font-medium">{pedido.id}</div>
-                            <div className="text-sm text-muted-foreground">{pedido.fecha}</div>
+                            <div className="font-medium">{pago.id}</div>
+                            <div className="text-sm text-muted-foreground">{pago.fecha}</div>
                           </div>
                           <div className="mt-2 sm:mt-0 flex items-center gap-4">
-                            <div className="font-medium">{ }</div>
-                            <Badge variant={pedido.idEstado === "entregado" ? "outline" : "default"}>
-                              {pedido.estado}
+                            <div className="font-medium">total: {pago.amount / 100} {pago.currency}</div>
+                            <Badge variant={pago.idEstado === "entregado" ? "outline" : "default"}>
+                              {pago.status === "succeeded" ? "Completado" : pago.status}
                             </Badge>
                           </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="text-center py-6 text-muted-foreground">No tienes pedidos recientes</div>
+                    <div className="text-center py-6 text-muted-foreground">No tienes pagos recientes</div>
                   )}
                 </CardContent>
-                {pedidosRecientes.length > 0 && (
+                {!isLoading && pagos.length > 0 && (
                   <CardFooter className="flex justify-center border-t p-4">
-                    <Button variant="outline">Ver todos los pedidos</Button>
+                    <Button variant="outline">Ver todos los pagos</Button>
                   </CardFooter>
                 )}
               </Card>
-            </TabsContent> */}
+            </TabsContent>
 
             {/* Contenido de reservas */}
             <TabsContent value="reservas">

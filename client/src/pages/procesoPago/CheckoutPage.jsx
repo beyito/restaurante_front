@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import { Elements } from '@stripe/react-stripe-js';
 import { stripePromise } from '@/stripe';
 import { useAuth } from '@/context/AuthContext';
-import { registrarPedidoDomicilio } from '@/api/pedido';
+import { registrarPedidoDomicilio,pagarTicket } from '@/api/pedido';
 
 export default function CheckoutPage() {
   const { cart, total, limpiarCarrito } = useCart();
@@ -23,13 +23,15 @@ export default function CheckoutPage() {
         cantidad: item.quantity,
         exclusiones: []
       }))
-      await registrarPedidoDomicilio(user.user.id, "D", producto);
+      const idPedido = await registrarPedidoDomicilio(user.user.id, "D", producto)
+      await pagarTicket(idPedido,2);
     } catch (error) {
       console.error('Error al procesar el pago:', error);
-      toast.error('Error al procesar el pago. Inténtalo de nuevo más tarde.');
+      toast.error('Stock Sobrepasado o error al procesar el pago');
       return;
 
     }
+    
     toast.success('Pago realizado con éxito');
     limpiarCarrito();
     // Redirigir a una página de confirmación o éxito

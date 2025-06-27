@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { useStripe, useElements } from '@stripe/react-stripe-js';
 import { crearMetodoPago } from '@/api/metodoPago/metodoPago';
 import { CardElement } from '@stripe/react-stripe-js';
+import { useAuth } from '@/context/AuthContext';
 
 export function MetodoPago({ onSuccess, productos }) {
+  const { user } = useAuth()
   const [selectedMethod, setSelectedMethod] = useState('tarjeta');
   const [errorMessage, setErrorMessage] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -50,7 +52,8 @@ export function MetodoPago({ onSuccess, productos }) {
         payment_method: {
           card: elements.getElement(CardElement),
           billing_details: {
-            name: 'Nombre del cliente',
+            name: user.user.nombre,
+            email: user.user.email,
           },
         },
       });

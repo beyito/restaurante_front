@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react'
 import { useFetchData } from '../../hooks/useFetchData'
 import { getInventarioRequest } from '../../api/inventario'
+import ModalEditarStockMinimo from '../modals/ModalEditStock'
+import SuccessModal from '../modals/SuccessModal'
 import {
   ChevronUpIcon,
   ChevronDownIcon,
@@ -9,12 +11,17 @@ import {
   CubeIcon,
   ArrowTrendingDownIcon
 } from '@heroicons/react/24/outline'
-
+import { useModal } from '@/hooks/useModal'
 const extractInventario = (res) => res.data.stock
 
 export default function Inventario() {
-  const { data } = useFetchData(getInventarioRequest, extractInventario)
-
+  const { data, refresh } = useFetchData(
+    getInventarioRequest,
+    extractInventario
+  )
+  const EditModal = useModal()
+  const Success = useModal()
+  const [currentProduct, setCurrentProduct] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [sortConfig, setSortConfig] = useState({
     key: 'id',
@@ -247,12 +254,18 @@ export default function Inventario() {
                     )}
                   </td>
                   <td className='px-6 py-4 whitespace-nowrap text-sm font-medium'>
-                    <button className='text-red-600 hover:text-red-900 mr-3'>
-                      Editar
+                    <button
+                      className='text-gray-600 hover:text-gray-900 mr-3'
+                      onClick={() => {
+                        setCurrentProduct(item)
+                        EditModal.open()
+                      }}
+                    >
+                      Editar Stock Mínimo
                     </button>
-                    <button className='text-gray-600 hover:text-gray-900'>
+                    {/* <button className='text-gray-600 hover:text-gray-900'>
                       Reponer
-                    </button>
+                    </button> */}
                   </td>
                 </tr>
               )
@@ -260,6 +273,25 @@ export default function Inventario() {
           </tbody>
         </table>
       </div>
+      {/* Modal para editar stock */}
+      {EditModal.isOpen && (
+        <ModalEditarStockMinimo
+          setSuccessModalOpen={() => {
+            EditModal.close()
+            Success.open() // Abrir modal de éxito al cerrar el modal de edición
+            refresh()
+          }}
+          onClose={EditModal.close}
+          currentItem={currentProduct}
+        />
+      )}
+      {/* Modal de éxito */}
+      {Success.isOpen && (
+        <SuccessModal
+          setIsOpen={Success.toggle}
+          message='Stock actualizado correctamente'
+        />
+      )}
 
       {/* Mensaje si no hay resultados */}
       {filteredAndSortedData.length === 0 && (

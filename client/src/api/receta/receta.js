@@ -9,3 +9,5 @@ export const eliminarReceta = async (idProducto) => instancia.delete("/recetas/e
 export const mostrarRecetaPorProducto = async () => instancia.get("/recetas/mostrar") 
 
 export const mostrarIngredientes = async () => instancia.get("/ingredientes/mostrar")
+
+export const getIngredientsRequest = async (idProducto) => instancia.get(`/recetas/mostrar/${idProducto}`)

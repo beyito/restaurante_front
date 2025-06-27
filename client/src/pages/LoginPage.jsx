@@ -23,8 +23,8 @@ export default function LoginPage() {
   }, [isAuthenticated, navigate])
 
   return (
-    <div className="flex items-center justify-center min-h-screen w-screen  bg-gray-100">
-      <Card className="mb-100 w-full max-w-md bg-white shadow-lg rounded-lg p-6">
+    <div className="flex items-center  justify-center w-screen ">
+      <Card className=" mt-15  w-full max-w-md shadow-lg rounded-lg p-6">
         <CardHeader>
           <CardTitle className="text-2xl text-center text-gray-800">
             Bienvenido
@@ -73,7 +73,7 @@ export default function LoginPage() {
 
             <Button
               type="submit"
-              className="w-full bg-black text-white hover:bg-gray-800 transition duration-300"
+              className="w-full"
             >
               Login
             </Button>
@@ -83,7 +83,7 @@ export default function LoginPage() {
           <p className="text-sm text-gray-700">¿No tienes una cuenta?</p>
           <Link
             to="/register"
-            className="text-sm text-black hover:underline"
+            className="text-sm text-purple-700 hover:underline"
           >
             Regístrate aquí
           </Link>
